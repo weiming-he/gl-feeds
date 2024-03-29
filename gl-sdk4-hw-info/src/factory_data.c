@@ -22,7 +22,11 @@ static int block_part_read(const char *part, unsigned int from,
     char *buf = val;
     int cpylen;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 5, 0)
     bdev = blkdev_get_by_path(part, mode, NULL);
+#else
+    bdev = blkdev_get_by_path(part, mode, NULL, NULL);
+#endif
     if (IS_ERR(bdev))
         return -1;
 
@@ -45,7 +49,11 @@ static int block_part_read(const char *part, unsigned int from,
         index++;
     }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 5, 0)
     blkdev_put(bdev, mode);
+#else
+    blkdev_put(bdev, NULL);
+#endif
 
     return 0;
 }
