@@ -1,13 +1,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=lua-eco
+PKG_VERSION:=3.3.0
 PKG_RELEASE:=1
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL=https://github.com/zhaojh329/lua-eco.git
-PKG_SOURCE_DATE:=2024-3-27
-PKG_SOURCE_VERSION:=afda9a07798c423774afd8bbc8618578b1ef5efc
-PKG_MIRROR_HASH:=8f8ba0f7f435b7e9961dbc4596a02cbbbe87542fd8a736189faa5d9bd1e05894
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_URL=https://github.com/zhaojh329/lua-eco/releases/download/v$(PKG_VERSION)
+PKG_HASH:=597c3edbb20c35f638b26b4fa7a02638c48f96f0330758a7ac1c44079b2170a3
 
 PKG_MAINTAINER:=Jianhui Zhao <zhaojh329@gmail.com>
 PKG_LICENSE:=MIT
