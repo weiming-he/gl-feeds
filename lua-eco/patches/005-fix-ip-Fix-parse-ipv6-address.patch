@@ -1,0 +1,98 @@
+From 4a5fea1fa69844f7e746c3e74d02f1050f7bf17e Mon Sep 17 00:00:00 2001
+From: Jianhui Zhao <zhaojh329@gmail.com>
+Date: Mon, 8 Apr 2024 10:58:14 +0800
+Subject: [PATCH 4/4] fix(ip): Fix parse ipv6 address
+
+Signed-off-by: Jianhui Zhao <zhaojh329@gmail.com>
+---
+ examples/netlink/ip-addr-get.lua | 12 ++++++++++--
+ ip.lua                           | 30 +++++++++++++++++-------------
+ 2 files changed, 27 insertions(+), 15 deletions(-)
+
+diff --git a/examples/netlink/ip-addr-get.lua b/examples/netlink/ip-addr-get.lua
+index d03cd99..37473cf 100755
+--- a/examples/netlink/ip-addr-get.lua
++++ b/examples/netlink/ip-addr-get.lua
+@@ -1,6 +1,7 @@
+ #!/usr/bin/env eco
+ 
+ local addr = require 'eco.ip'.address
++local socket = require 'eco.socket'
+ 
+ local ifname = 'eth0'
+ 
+@@ -10,6 +11,13 @@ if not res then
+     return
+ end
+ 
+-for k, v in pairs(res) do
+-    print(k .. ':', v)
++for _, info in pairs(res) do
++    if info.family == socket.AF_INET then
++        print(info.ifname, 'inet', info.scope)
++        print('', info.address, info.broadcast)
++    else
++        print(info.ifname, 'inet6', info.scope)
++        print('', info.address)
++    end
++    print()
+ end
+diff --git a/ip.lua b/ip.lua
+index 9ef8138..8dbde8c 100644
+--- a/ip.lua
++++ b/ip.lua
+@@ -452,26 +452,30 @@ function address.get(dev)
+                 if not dev_index or dev_index == info.index then
+                     res.ifname = socket.if_indextoname(info.index)
+                     res.scope = rtscope_to_name[info.scope]
++                    res.family = family
+ 
+                     local attrs = msg:parse_attr(rtnl.IFADDRMSG_SIZE)
++                    local addr_attr
+ 
+-                    if attrs[rtnl.IFA_LOCAL] then
+-                        res.address = socket.inet_ntop(family, nl.attr_get_payload(attrs[rtnl.IFA_LOCAL]))
++                    if family == socket.AF_INET then
++                        addr_attr = attrs[rtnl.IFA_LOCAL]
++                    elseif family == socket.AF_INET6 then
++                        addr_attr = attrs[rtnl.IFA_ADDRESS]
+                     end
+ 
+-                    if attrs[rtnl.IFA_BROADCAST] then
+-                        res.broadcast = socket.inet_ntop(family, nl.attr_get_payload(attrs[rtnl.IFA_BROADCAST]))
+-                    end
++                    if addr_attr then
++                        res.address = socket.inet_ntop(family, nl.attr_get_payload(addr_attr))
+ 
+-                    if attrs[rtnl.IFA_LABEL] then
+-                        res.label = nl.attr_get_str(attrs[rtnl.IFA_LABEL])
+-                    end
++                        if attrs[rtnl.IFA_BROADCAST] then
++                            res.broadcast = socket.inet_ntop(family, nl.attr_get_payload(attrs[rtnl.IFA_BROADCAST]))
++                        end
+ 
+-                    if dev_index then
+-                        return res
+-                    end
++                        if attrs[rtnl.IFA_LABEL] then
++                            res.label = nl.attr_get_str(attrs[rtnl.IFA_LABEL])
++                        end
+ 
+-                    reses[#reses + 1] = res
++                        reses[#reses + 1] = res
++                    end
+                 end
+             elseif nlh.type == nl.NLMSG_ERROR then
+                 err = msg:parse_error()
+@@ -479,7 +483,7 @@ function address.get(dev)
+                     return nil, 'RTNETLINK answers: ' .. sys.strerror(-err)
+                 end
+             elseif nlh.type == nl.NLMSG_DONE then
+-                if dev_index then
++                if dev_index and #reses < 1 then
+                     return nil, 'not found'
+                 end
+                 return reses
+-- 
+2.34.1
+
