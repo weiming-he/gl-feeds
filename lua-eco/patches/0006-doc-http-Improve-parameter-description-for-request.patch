@@ -1,0 +1,25 @@
+From 45d492fbcf56770a04cc0575a3167f6d4d8ccf09 Mon Sep 17 00:00:00 2001
+From: Jianhui Zhao <zhaojh329@gmail.com>
+Date: Mon, 8 Apr 2024 18:16:56 +0800
+Subject: [PATCH 6/9] doc(http): Improve parameter description for `request`
+
+Signed-off-by: Jianhui Zhao <zhaojh329@gmail.com>
+---
+ http/client.lua | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/http/client.lua b/http/client.lua
+index f29ee5c..4a617f1 100644
+--- a/http/client.lua
++++ b/http/client.lua
+@@ -451,6 +451,7 @@ end
+         mark: a number used to set SO_MARK to socket
+         device: a string used to set SO_BINDTODEVICE to socket
+         nameservers: see dns.query
++        headers: A table contains headers user customized
+ 
+     In case of failure, the function returns nil followed by an error message.
+     If successful, returns a table contains the
+-- 
+2.34.1
+

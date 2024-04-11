@@ -1,7 +1,7 @@
-From 20957d4938b83ac2e1dfffb674b5c885c9ae806a Mon Sep 17 00:00:00 2001
+From dd5db47bcee22292bc25bcb1bfabf5cb33f90346 Mon Sep 17 00:00:00 2001
 From: Jianhui Zhao <zhaojh329@gmail.com>
 Date: Tue, 9 Apr 2024 16:37:07 +0800
-Subject: [PATCH 1/2] fix(socket): `ev_io` and `ev_timer` should be stoped in
+Subject: [PATCH 7/9] fix(socket): `ev_io` and `ev_timer` should be stoped in
  `close`.
 
 Signed-off-by: Jianhui Zhao <zhaojh329@gmail.com>
@@ -10,10 +10,10 @@ Signed-off-by: Jianhui Zhao <zhaojh329@gmail.com>
  1 file changed, 4 insertions(+)
 
 diff --git a/socket.c b/socket.c
-index f3cd114..d41acb9 100644
+index 9c2b57b..b9fef42 100644
 --- a/socket.c
 +++ b/socket.c
-@@ -753,6 +753,7 @@ static int lua_closed(lua_State *L)
+@@ -738,6 +738,7 @@ static int lua_closed(lua_State *L)
  static int lua_sock_close(lua_State *L)
  {
      struct eco_socket *sock = luaL_checkudata(L, 1, ECO_SOCKET_MT);
@@ -21,7 +21,7 @@ index f3cd114..d41acb9 100644
  
      if (sock->fd < 0)
          return 0;
-@@ -765,6 +766,9 @@ static int lua_sock_close(lua_State *L)
+@@ -750,6 +751,9 @@ static int lua_sock_close(lua_State *L)
              unlink(un.sun_path);
      }
  
