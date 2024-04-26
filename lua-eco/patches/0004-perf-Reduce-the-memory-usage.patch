@@ -1,0 +1,153 @@
+From dc05a39b43124bee958c00da6b01a38b9db86453 Mon Sep 17 00:00:00 2001
+From: Jianhui Zhao <zhaojh329@gmail.com>
+Date: Fri, 26 Apr 2024 14:46:54 +0800
+Subject: [PATCH 1/2] perf: Reduce the memory usage
+
+Signed-off-by: Jianhui Zhao <zhaojh329@gmail.com>
+---
+ http/client.lua | 54 ++++++++++++++++++++++++-------------------------
+ http/server.lua |  2 +-
+ mqtt.lua        |  2 +-
+ 3 files changed, 29 insertions(+), 29 deletions(-)
+
+diff --git a/http/client.lua b/http/client.lua
+index 83eaca9..2459e75 100644
+--- a/http/client.lua
++++ b/http/client.lua
+@@ -1,12 +1,9 @@
+ -- SPDX-License-Identifier: MIT
+ -- Author: Jianhui Zhao <zhaojh329@gmail.com>
+ 
+-local base64 = require 'eco.encoding.base64'
+ local socket = require 'eco.socket'
+ local URL = require 'eco.http.url'
+ local file = require 'eco.file'
+-local ssl = require 'eco.ssl'
+-local dns = require 'eco.dns'
+ 
+ local concat = table.concat
+ local tonumber = tonumber
+@@ -354,6 +351,7 @@ function methods:request(method, url, body, opts)
+                                 rand(256) - 1, rand(256) - 1, rand(256) - 1,
+                                 rand(256) - 1)
+ 
++        local base64 = require 'eco.encoding.base64'
+         headers['sec-websocket-key'] = base64.encode(bytes)
+     end
+ 
+@@ -375,46 +373,48 @@ function methods:request(method, url, body, opts)
+         headers[k:lower()] = v
+     end
+ 
+-    local answers, err = dns.query(host, {
+-        type = opts.ipv6 and dns.TYPE_AAAA or dns.TYPE_A,
+-        mark = opts.mark,
+-        device = opts.device,
+-        nameservers = opts.nameservers
+-    })
+-    if not answers then
+-        return nil, 'resolve "' .. host .. '" fail: ' .. err
+-    end
+-
+     local addresses = {}
+ 
+-    for _, a in ipairs(answers) do
+-        if a.type == dns.TYPE_A or a.type == dns.TYPE_AAAA then
+-            addresses[#addresses + 1] = a
++    if socket.is_ip_address(host) then
++        addresses[1] = host
++    else
++        local dns = require 'eco.dns'
++        local answers, err = dns.query(host, {
++            type = opts.ipv6 and dns.TYPE_AAAA or dns.TYPE_A,
++            mark = opts.mark,
++            device = opts.device,
++            nameservers = opts.nameservers
++        })
++        if not answers then
++            return nil, 'resolve "' .. host .. '" fail: ' .. err
++        end
++
++        for _, a in ipairs(answers) do
++            if a.type == dns.TYPE_A or a.type == dns.TYPE_AAAA then
++                addresses[#addresses + 1] = a.address
++            end
+         end
+-    end
+ 
+-    if #addresses < 1 then
+-        return nil, 'resolve "' .. host .. '" fail: not found'
++        if #addresses < 1 then
++            return nil, 'resolve "' .. host .. '" fail: not found'
++        end
+     end
+ 
+     local sock
+ 
+-    for _, a in ipairs(addresses) do
++    for _, address in ipairs(addresses) do
+         if scheme_info.use_ssl then
+-            sock, err = ssl.connect(a.address, port, opts)
++            local ssl = require 'eco.ssl'
++            sock, err = ssl.connect(address, port, opts)
+         else
+-            sock, err = socket.connect_tcp(a.address, port, opts)
++            sock, err = socket.connect_tcp(address, port, opts)
+         end
+ 
+         if sock then
+             break
+         end
+ 
+-        if a.type == dns.TYPE_A then
+-            err = string.format('connect "%s:%d" fail: ', a.address, port) .. err
+-        else
+-            err = string.format('connect "[%s]:%d" fail: ', a.address, port) .. err
+-        end
++        err = string.format('connect "%s %d" fail: ', address, port) .. err
+     end
+ 
+     if not sock then
+diff --git a/http/server.lua b/http/server.lua
+index 5b7ab05..dde8083 100644
+--- a/http/server.lua
++++ b/http/server.lua
+@@ -4,7 +4,6 @@
+ local file = require 'eco.core.file'
+ local socket = require 'eco.socket'
+ local url = require 'eco.http.url'
+-local ssl = require 'eco.ssl'
+ local log = require 'eco.log'
+ 
+ local str_lower = string.lower
+@@ -782,6 +781,7 @@ function M.listen(ipaddr, port, options, handler)
+     local sock, err
+ 
+     if options.cert and options.key then
++        local ssl = require 'eco.ssl'
+         options.ssl = true
+         sock, err = ssl.listen(ipaddr, port, options)
+     else
+diff --git a/mqtt.lua b/mqtt.lua
+index ad59e9e..3a73828 100644
+--- a/mqtt.lua
++++ b/mqtt.lua
+@@ -3,7 +3,6 @@
+ 
+ local socket = require 'eco.socket'
+ local time = require 'eco.time'
+-local ssl = require 'eco.ssl'
+ 
+ local str_char = string.char
+ local str_byte = string.byte
+@@ -409,6 +408,7 @@ local function mqtt_connect(self)
+     local sock, err
+ 
+     if opts.ssl then
++        local ssl = require 'eco.ssl'
+         sock, err = ssl.connect(ipaddr, opts.port or 8883, opts)
+     else
+         sock, err = socket.connect_tcp(ipaddr, opts.port or 1883, opts)
+-- 
+2.34.1
+
