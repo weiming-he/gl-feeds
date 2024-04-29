@@ -43,7 +43,13 @@ static irqreturn_t handle_gpio_irq(int irq, void *data)
     return IRQ_HANDLED;
 }
 
-static ssize_t fan_speed_show(struct class *class, struct class_attribute *attr, char *buf)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
+static ssize_t fan_speed_show(struct class *class, struct class_attribute *attr,
+			char *buf)
+#else
+static ssize_t fan_speed_show(const struct class *class, const struct class_attribute *attr,
+			  char *buf)
+#endif
 {
     if (gl_fan.refresh) {
         return sprintf(buf, "refreshing...\n");
@@ -56,7 +62,13 @@ static ssize_t fan_speed_show(struct class *class, struct class_attribute *attr,
     }
 }
 
-static ssize_t fan_speed_store(struct class *class, struct class_attribute *attr, const char *buf, size_t count)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
+static ssize_t fan_speed_store(struct class *class, struct class_attribute *attr,
+			const char *buf, size_t count)
+#else
+static ssize_t fan_speed_store(const struct class *class, const struct class_attribute *attr,
+			   const char *buf, size_t count)
+#endif
 {
     if (!strstr(buf, "refresh")) {
         pr_err("please input 'refresh' %s\n", buf);
@@ -80,8 +92,7 @@ static ssize_t fan_speed_store(struct class *class, struct class_attribute *attr
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
 static CLASS_ATTR(fan_speed, 0664, fan_speed_show, fan_speed_store);
 #else
-static const struct class_attribute class_attr_fan_speed =
-    __ATTR(fan_speed, 0664, fan_speed_show, fan_speed_store);
+static CLASS_ATTR_RW(fan_speed);
 #endif
 
 static int gl_fan_probe(struct platform_device *pdev)
@@ -110,7 +121,11 @@ static int gl_fan_probe(struct platform_device *pdev)
     timer_setup(&gl_fan.timer, gl_fan_timer_callback, 0);
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
     gl_fan.class = class_create(THIS_MODULE, "fan");
+#else
+    gl_fan.class = class_create("fan");
+#endif
     ret = class_create_file(gl_fan.class, &class_attr_fan_speed);
     if (ret) {
         dev_err(dev, "fail to creat class file\n");
