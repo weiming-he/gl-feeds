@@ -24,7 +24,7 @@ struct glinet_hw_info {
     u8 device_sn[SN_LEN + 1];
     u8 device_sn_bak[SN_LEN + 1];
     u8 device_submodel[SUBMODEL_LEN + 1];
-    u8 device_cert[CERT_LEN];
+    u8 device_cert[CERT_LEN + 1];
     u8 *device_key;
 };
 
