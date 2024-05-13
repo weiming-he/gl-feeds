@@ -156,9 +156,6 @@ static void make_device_cert(struct device_node *np)
     if (parse_value(np, "device_cert", gl_hw_info.device_cert, CERT_LEN))
         return;
 
-    if (strlen(gl_hw_info.device_cert) == 0)
-        return;
-
     p = strstr(gl_hw_info.device_cert, "-----BEGIN PRIVATE KEY-----");
     if (!p)
         return;
