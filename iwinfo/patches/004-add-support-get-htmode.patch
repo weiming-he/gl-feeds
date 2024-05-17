@@ -1,0 +1,247 @@
+--- a/include/iwinfo.h
++++ b/include/iwinfo.h
+@@ -88,8 +88,9 @@ enum iwinfo_htmode {
+ 	IWINFO_HTMODE_VHT80      = (1 << 4),
+ 	IWINFO_HTMODE_VHT80_80   = (1 << 5),
+ 	IWINFO_HTMODE_VHT160     = (1 << 6),
++	IWINFO_HTMODE_NOHT       = (1 << 7),
+ 
+-	IWINFO_HTMODE_COUNT      = 7
++	IWINFO_HTMODE_COUNT      = 8
+ };
+ 
+ extern const char *IWINFO_HTMODE_NAMES[IWINFO_HTMODE_COUNT];
+@@ -232,6 +233,7 @@ struct iwinfo_ops {
+ 	int (*mbssid_support)(const char *, int *);
+ 	int (*hwmodelist)(const char *, int *);
+ 	int (*htmodelist)(const char *, int *);
++	int (*htmode)(const char *, int *);
+ 	int (*ssid)(const char *, char *);
+ 	int (*bssid)(const char *, char *);
+ 	int (*country)(const char *, char *);
+--- a/include/iwinfo/utils.h
++++ b/include/iwinfo/utils.h
+@@ -43,6 +43,8 @@ static inline int iwinfo_mbm2dbm(int gai
+ 	return gain / 100;
+ }
+ 
++const char * const iwinfo_htmode_name(int mask);
++
+ int iwinfo_ifup(const char *ifname);
+ int iwinfo_ifdown(const char *ifname);
+ int iwinfo_ifmac(const char *ifname);
+--- a/iwinfo_cli.c
++++ b/iwinfo_cli.c
+@@ -521,6 +521,20 @@ static char * print_hwmodes(const struct
+ 	return format_hwmodes(modes);
+ }
+ 
++static const char *print_htmode(const struct iwinfo_ops *iw, const char *ifname)
++{
++	int mode;
++	const char *name;
++	if (iw->htmode(ifname, &mode))
++		mode = -1;
++
++	name = iwinfo_htmode_name(mode);
++	if (name)
++		return name;
++
++	return "unknown";
++}
++
+ static char * print_mbssid_supp(const struct iwinfo_ops *iw, const char *ifname)
+ {
+ 	int supp;
+@@ -552,10 +566,11 @@ static void print_info(const struct iwin
+ 		print_ssid(iw, ifname));
+ 	printf("          Access Point: %s\n",
+ 		print_bssid(iw, ifname));
+-	printf("          Mode: %s  Channel: %s (%s)\n",
++	printf("          Mode: %s  Channel: %s (%s) HT Mode: %s\n",
+ 		print_mode(iw, ifname),
+ 		print_channel(iw, ifname),
+-		print_frequency(iw, ifname));
++		print_frequency(iw, ifname),
++		print_htmode(iw, ifname));
+ 	printf("          Tx-Power: %s  Link Quality: %s/%s\n",
+ 		print_txpower(iw, ifname),
+ 		print_quality(iw, ifname),
+--- a/iwinfo_lib.c
++++ b/iwinfo_lib.c
+@@ -66,6 +66,7 @@ const char *IWINFO_HTMODE_NAMES[] = {
+ 	"VHT80",
+ 	"VHT80+80",
+ 	"VHT160",
++	"NOHT",
+ };
+ 
+ 
+--- a/iwinfo_lua.c
++++ b/iwinfo_lua.c
+@@ -254,6 +254,21 @@ static int iwinfo_L_mode(lua_State *L, i
+ 	return 1;
+ }
+ 
++static int iwinfo_L_htmode(lua_State *L, int (*func)(const char *, int *))
++{
++	int mode;
++	const char *ifname = luaL_checkstring(L, 1);
++
++	if ((*func)(ifname, &mode)) {
++		lua_pushnil(L);
++	} else {
++		const char *htmode = iwinfo_htmode_name(mode);
++		lua_pushstring(L, htmode ? htmode : "unknown");
++	}
++
++	return 1;
++}
++
+ static void set_rateinfo(lua_State *L, struct iwinfo_rate_entry *r, bool rx)
+ {
+ 	lua_pushnumber(L, r->rate);
+@@ -750,6 +765,7 @@ LUA_WRAP_STRING_OP(nl80211,country)
+ LUA_WRAP_STRING_OP(nl80211,hardware_name)
+ LUA_WRAP_STRING_OP(nl80211,phyname)
+ LUA_WRAP_STRUCT_OP(nl80211,mode)
++LUA_WRAP_STRUCT_OP(nl80211,htmode)
+ LUA_WRAP_STRUCT_OP(nl80211,assoclist)
+ LUA_WRAP_STRUCT_OP(nl80211,txpwrlist)
+ LUA_WRAP_STRUCT_OP(nl80211,scanlist)
+@@ -870,6 +886,7 @@ static const luaL_reg R_nl80211[] = {
+ 	LUA_REG(nl80211,quality),
+ 	LUA_REG(nl80211,quality_max),
+ 	LUA_REG(nl80211,mode),
++	LUA_REG(nl80211,htmode),
+ 	LUA_REG(nl80211,ssid),
+ 	LUA_REG(nl80211,bssid),
+ 	LUA_REG(nl80211,country),
+--- a/iwinfo_nl80211.c
++++ b/iwinfo_nl80211.c
+@@ -3054,6 +3054,75 @@ out:
+ 	return -1;
+ }
+ 
++struct chan_info {
++	int width;
++	int mode;
++};
++
++static int nl80211_get_htmode_cb(struct nl_msg *msg, void *arg)
++{
++	struct nlattr **tb = nl80211_parse(msg);
++	struct nlattr *cur;
++	struct chan_info *chn = arg;
++
++	if ((cur = tb[NL80211_ATTR_CHANNEL_WIDTH]))
++		chn->width = nla_get_u32(cur);
++
++	if ((cur = tb[NL80211_ATTR_BSS_HT_OPMODE]))
++		chn->mode = nla_get_u32(cur);
++
++	return NL_SKIP;
++}
++
++static int nl80211_get_htmode(const char *ifname, int *buf)
++{
++	struct chan_info chn = { 0 };
++	char *res, b[2] = { 0 };
++	int err;
++	bool he = false;
++
++	res = nl80211_phy2ifname(ifname);
++	*buf = 0;
++
++	err =  nl80211_request(res ? res : ifname,
++				NL80211_CMD_GET_INTERFACE, 0,
++				nl80211_get_htmode_cb, &chn);
++	if (err)
++		return -1;
++
++	switch (chn.width) {
++	case NL80211_CHAN_WIDTH_20:
++		if (chn.mode == -1)
++			*buf = IWINFO_HTMODE_VHT20;
++		else
++			*buf = IWINFO_HTMODE_HT20;
++		break;
++	case NL80211_CHAN_WIDTH_40:
++		if (chn.mode == -1)
++			*buf = IWINFO_HTMODE_VHT40;
++		else
++			*buf = IWINFO_HTMODE_HT40;
++		break;
++	case NL80211_CHAN_WIDTH_80:
++		*buf = IWINFO_HTMODE_VHT80;
++		break;
++	case NL80211_CHAN_WIDTH_80P80:
++		*buf = IWINFO_HTMODE_VHT80_80;
++		break;
++	case NL80211_CHAN_WIDTH_160:
++		*buf = IWINFO_HTMODE_VHT160;
++		break;
++	case NL80211_CHAN_WIDTH_5:
++	case NL80211_CHAN_WIDTH_10:
++	case NL80211_CHAN_WIDTH_20_NOHT:
++		*buf = IWINFO_HTMODE_NOHT;
++		break;
++	default:
++		return -1;
++	}
++
++	return 0;
++}
+ 
+ static int nl80211_get_ifcomb_cb(struct nl_msg *msg, void *arg)
+ {
+@@ -3224,6 +3293,7 @@ const struct iwinfo_ops nl80211_ops = {
+ 	.mbssid_support   = nl80211_get_mbssid_support,
+ 	.hwmodelist       = nl80211_get_hwmodelist,
+ 	.htmodelist       = nl80211_get_htmodelist,
++	.htmode		      = nl80211_get_htmode,
+ 	.mode             = nl80211_get_mode,
+ 	.ssid             = nl80211_get_ssid,
+ 	.bssid            = nl80211_get_bssid,
+--- a/iwinfo_utils.c
++++ b/iwinfo_utils.c
+@@ -77,6 +77,39 @@ int iwinfo_mw2dbm(int in)
+ 	return (int)res;
+ }
+ 
++static int iwinfo_bit(int value, int max)
++{
++	int i;
++
++	if (max > 31 || !(value & ((1 << max) - 1)))
++		return -1;
++
++	for (i = 0; i < max; i++)
++	{
++		if (value & 1)
++			break;
++
++		value >>= 1;
++	}
++
++	return i;
++}
++
++static const char * const iwinfo_name(int mask, int max, const char * const names[])
++{
++	int index = iwinfo_bit(mask, max);
++
++	if (index < 0)
++		return NULL;
++
++	return names[index];
++}
++
++const char * const iwinfo_htmode_name(int mask)
++{
++	return iwinfo_name(mask, IWINFO_HTMODE_COUNT, IWINFO_HTMODE_NAMES);
++}
++
+ int iwinfo_ifup(const char *ifname)
+ {
+ 	struct ifreq ifr;
