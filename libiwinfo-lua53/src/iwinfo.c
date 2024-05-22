@@ -41,7 +41,7 @@ static int lua_iwinfo_info(lua_State *L)
         lua_setfield(L, -2, "signal");
     }
 
-    if (!iw->htmode(ifname, &num)) {
+    if (iw->htmode && !iw->htmode(ifname, &num)) {
         const char *htmode = iwinfo_htmode_name(num);
         lua_pushstring(L, htmode ? htmode : "unknown");
         lua_setfield(L, -2, "htmode");
