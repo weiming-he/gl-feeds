@@ -47,6 +47,11 @@ static int lua_iwinfo_info(lua_State *L)
         lua_setfield(L, -2, "htmode");
     }
 
+    if (!iw->phyname(ifname, buf)) {
+        lua_pushstring(L, buf);
+        lua_setfield(L, -2, "phyname");
+    }
+
     iwinfo_finish();
 
     return 1;
