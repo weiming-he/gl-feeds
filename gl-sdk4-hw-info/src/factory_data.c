@@ -214,6 +214,17 @@ static void make_device_submodel(struct device_node *np)
     create_proc_node("device_submodel", gl_hw_info.device_submodel);
 }
 
+static void make_firmware_type_flag(struct device_node *np)
+{
+    if (parse_value(np, "firmware_type", gl_hw_info.firmware_type, FIRMWARE_LEN))
+        return;
+
+    if (strlen(gl_hw_info.firmware_type) && gl_hw_info.firmware_type[0] == '2')
+        create_proc_node("firmware_type", gl_hw_info.firmware_type);
+    else
+        create_proc_node("firmware_type", "2c");
+}
+
 void make_factory_data(struct device_node *np)
 {
     make_device_mac(np);
@@ -223,4 +234,5 @@ void make_factory_data(struct device_node *np)
     make_device_cert(np);
     make_device_country_code(np);
     make_device_submodel(np);
+    make_firmware_type_flag(np);
 }
