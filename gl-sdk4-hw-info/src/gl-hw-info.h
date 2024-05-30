@@ -14,6 +14,7 @@
 #define SN_LEN 16
 #define DDNS_LEN 7
 #define COUNTRY_LEN 2
+#define FIRMWARE_LEN 2
 #define CERT_LEN 4096
 #define SUBMODEL_LEN 16
 
@@ -21,6 +22,7 @@ struct glinet_hw_info {
     struct proc_dir_entry *parent;
     u8 device_mac[18];
     u8 device_ddns[DDNS_LEN + 1];
+    u8 firmware_type[FIRMWARE_LEN + 1];
     u8 device_sn[SN_LEN + 1];
     u8 device_sn_bak[SN_LEN + 1];
     u8 device_submodel[SUBMODEL_LEN + 1];
