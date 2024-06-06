@@ -48,21 +48,27 @@ end
 M.get_status = function(params)
     local res = { speed = 0, status = false }
 
-    if not fs.access("/proc/gl-hw-info/fan") then
-        return res
+    for hwmon in fs.dir('/sys/class/hwmon/') do
+        local name = utils.readfile('/sys/class/hwmon/' .. hwmon .. '/name', '*l')
+        if name == 'pwmfan' then
+            local fan_input = '/sys/class/hwmon/' .. hwmon .. '/' .. 'fan1_input'
+            if fs.access(fan_input) then
+                res.speed = utils.readfile(fan_input, "*n")
+            else
+               utils.writefile('/sys/class/fan/fan_speed', 'refresh')
+               ngx.sleep(1.5)
+               res.speed = tonumber(utils.readfile('/sys/class/fan/fan_speed'):match('(%d+)'))
+            end
+        end
     end
 
-    local hwmon, cooling_device = utils.readfile("/proc/gl-hw-info/fan", "l"):match("(.+) (.+)")
-
-    if fs.access("/sys/class/hwmon/" .. hwmon .. "/fan1_input") then
-        res.speed = utils.readfile("/sys/class/hwmon/" .. hwmon .. "/fan1_input", "n")
-    else
-        utils.writefile("/sys/class/fan/fan_speed", "refresh")
-        ngx.sleep(1.5)
-        res.speed = tonumber(utils.readfile("/sys/class/fan/fan_speed"):match("(%d+)"))
+    for name in fs.dir('/sys/class/thermal/') do
+        local typ = utils.readfile('/sys/class/thermal/' .. name .. '/type', '*l')
+        if typ == 'pwm-fan' then
+            res.status = utils.readfile('/sys/class/thermal/' .. name .. '/cur_state', 'n') > 0
+        end
     end
 
-    res.status = utils.readfile("/sys/class/thermal/" .. cooling_device .. "/cur_state", 'n') > 0
     return res
 end
 
