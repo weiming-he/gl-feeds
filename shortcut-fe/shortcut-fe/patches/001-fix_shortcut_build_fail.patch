@@ -1,0 +1,22 @@
+Index: b/sfe_cm.c
+===================================================================
+--- a/sfe_cm.c	2024-06-20 14:58:20.961194939 +0800
++++ b/sfe_cm.c	2024-06-20 16:23:21.119118293 +0800
+@@ -1098,7 +1098,7 @@ static int __init sfe_cm_init(void)
+ 	 */
+ #ifdef CONFIG_NF_CONNTRACK_EVENTS
+ #ifdef CONFIG_NF_CONNTRACK_CHAIN_EVENTS
+-	result = nf_conntrack_register_chain_notifier(&init_net, &sfe_cm_conntrack_notifier);
++	result = nf_conntrack_register_notifier(&init_net, &sfe_cm_conntrack_notifier);
+ #else
+ 	result = nf_conntrack_register_notifier(&init_net, &sfe_cm_conntrack_notifier);
+ #endif
+@@ -1186,7 +1186,7 @@ static void __exit sfe_cm_exit(void)
+ 
+ #ifdef CONFIG_NF_CONNTRACK_EVENTS
+ #ifdef CONFIG_NF_CONNTRACK_CHAIN_EVENTS
+-	nf_conntrack_unregister_chain_notifier(&init_net, &sfe_cm_conntrack_notifier);
++	nf_conntrack_unregister_notifier(&init_net, &sfe_cm_conntrack_notifier);
+ #else
+ 	nf_conntrack_unregister_notifier(&init_net, &sfe_cm_conntrack_notifier);
+ #endif
