@@ -1,0 +1,53 @@
+From 9511dc3548da7db1bb0ce5ab03248a6588dd8c4f Mon Sep 17 00:00:00 2001
+From: Jianhui Zhao <zhaojh329@gmail.com>
+Date: Wed, 17 Jul 2024 11:35:44 +0800
+Subject: [PATCH] feat(nl80211): add support passive scan
+
+Signed-off-by: Jianhui Zhao <zhaojh329@gmail.com>
+---
+ examples/netlink/nl80211_scan.lua |  1 +
+ nl80211.lua                       | 15 ++++++---------
+ 2 files changed, 7 insertions(+), 9 deletions(-)
+
+diff --git a/examples/netlink/nl80211_scan.lua b/examples/netlink/nl80211_scan.lua
+index 6d6679e..e878e9a 100755
+--- a/examples/netlink/nl80211_scan.lua
++++ b/examples/netlink/nl80211_scan.lua
+@@ -6,6 +6,7 @@ local nl = require 'eco.nl'
+ 
+ local ifname = 'wlan0'
+ 
++-- If no ssids is passed, a passive scan is performed
+ local ok, err = nl80211.scan('trigger', { ifname = ifname, ssids = { '', 'test1', 'test2' }, freqs = { 2412, 2417 } })
+ if not ok then
+     print(err)
+diff --git a/nl80211.lua b/nl80211.lua
+index d756dfe..ba7b6c1 100644
+--- a/nl80211.lua
++++ b/nl80211.lua
+@@ -636,16 +636,13 @@ local function nl80211_scan(sock, msg, action, cmd, params)
+ 
+     if action == 'trigger' then
+         local ssids = params.ssids
+-
+-        if type(ssids) ~= 'table' or #ssids == 0 then
+-            ssids = { '' }
+-        end
+-
+-        msg:put_attr_nest_start(nl80211.ATTR_SCAN_SSIDS)
+-        for i, ssid in ipairs(ssids) do
+-            msg:put_attr_str(i, ssid)
++        if type(ssids) == 'table' and #ssids > 0 then
++            msg:put_attr_nest_start(nl80211.ATTR_SCAN_SSIDS)
++            for i, ssid in ipairs(ssids) do
++                msg:put_attr_str(i, ssid)
++            end
++            msg:put_attr_nest_end()
+         end
+-        msg:put_attr_nest_end()
+ 
+         local freqs = params.freqs
+         if type(freqs) == 'table' and #freqs > 0 then
+-- 
+2.34.1
+
