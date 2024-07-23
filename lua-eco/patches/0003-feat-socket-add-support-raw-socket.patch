@@ -1,0 +1,269 @@
+From 6a7182447ffc08c3a4419f7a5249d9c5736120f3 Mon Sep 17 00:00:00 2001
+From: Jianhui Zhao <zhaojh329@gmail.com>
+Date: Mon, 22 Jul 2024 22:17:40 +0800
+Subject: [PATCH] feat(socket): add support raw socket
+
+Signed-off-by: Jianhui Zhao <zhaojh329@gmail.com>
+---
+ examples/socket/raw/arping.lua  | 92 +++++++++++++++++++++++++++++++++
+ examples/socket/raw/capture.lua | 81 +++++++++++++++++++++++++++++
+ socket.c                        | 36 +++++++++++++
+ 3 files changed, 209 insertions(+)
+ create mode 100755 examples/socket/raw/arping.lua
+ create mode 100755 examples/socket/raw/capture.lua
+
+diff --git a/examples/socket/raw/arping.lua b/examples/socket/raw/arping.lua
+new file mode 100755
+index 0000000..3d4f310
+--- /dev/null
++++ b/examples/socket/raw/arping.lua
+@@ -0,0 +1,92 @@
++#!/usr/bin/env eco
++
++local hex = require 'eco.encoding.hex'
++local socket = require 'eco.socket'
++local link = require 'eco.ip'.link
++local sys = require 'eco.sys'
++
++if #arg < 2 then
++    print('Usage:', arg[0], 'device', 'destination')
++    os.exit(1)
++end
++
++sys.signal(sys.SIGINT, function()
++    print('\nGot SIGINT, now quit')
++    eco.unloop()
++end)
++
++local sock, err = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(socket.ETH_P_ARP))
++if not sock then
++    error(err)
++end
++
++local function send_arp(device, destination)
++    local res, err = link.get(device)
++    if not res then
++        error('get link:' .. err)
++    end
++
++    local sender_mac = res.address
++
++    print(sender_mac .. ' > ff:ff:ff:ff:ff:ff ARP REQUEST ' .. destination)
++
++    sender_mac = hex.decode(sender_mac:gsub(':', ''))
++
++    local data = {
++        string.char(0xff, 0xff, 0xff, 0xff, 0xff, 0xff), -- dest broadcast
++        sender_mac,
++        string.pack('>I2', socket.ETH_P_ARP),
++        string.pack('>I2', socket.ARPHRD_ETHER),
++        string.pack('>I2', socket.ETH_P_IP),
++        string.char(6), -- hardware address length
++        string.char(4), -- proto address length
++        string.pack('>I2', socket.ARPOP_REQUEST),
++        sender_mac,
++        string.pack('>I4', 0),  -- ender_ip
++        '\0\0\0\0\0\0',  -- target MAC address
++        string.pack('I4', socket.inet_aton(destination)),
++    }
++
++    sock:sendto(table.concat(data), { ifname = device })
++end
++
++local function packet_dump(data)
++    local dst = hex.encode(data:sub(1, 6), ':')
++    local src = hex.encode(data:sub(7, 12), ':')
++    local proto = string.unpack('>I2', data:sub(13, 14))
++
++    if proto ~= socket.ETH_P_ARP then
++        return
++    end
++
++    local output = {src, '>', dst}
++
++    data = data:sub(15) -- skip mac header
++
++    if proto == socket.ETH_P_ARP then
++        output[#output + 1] = 'ARP'
++    end
++
++    local op = string.unpack('>I2', data:sub(7))
++
++    output[#output + 1] = op == socket.ARPOP_REQUEST and 'REQUEST' or 'REPLY'
++
++    if op ~= socket.ARPOP_REPLY then
++        print(op)
++        return
++    end
++
++    output[#output + 1] = socket.inet_ntop(socket.AF_INET, data:sub(15))
++    output[#output + 1] = hex.encode(data:sub(9, 14), ':')
++
++    print(table.concat(output, ' '))
++end
++
++local device = arg[1]
++local destination = arg[2]
++
++send_arp(device, destination)
++
++local data = sock:recv(1024)
++
++packet_dump(data)
+diff --git a/examples/socket/raw/capture.lua b/examples/socket/raw/capture.lua
+new file mode 100755
+index 0000000..3347e96
+--- /dev/null
++++ b/examples/socket/raw/capture.lua
+@@ -0,0 +1,81 @@
++#!/usr/bin/env eco
++
++local hex = require 'eco.encoding.hex'
++local socket = require 'eco.socket'
++local sys = require 'eco.sys'
++
++sys.signal(sys.SIGINT, function()
++    print('\nGot SIGINT, now quit')
++    eco.unloop()
++end)
++
++local sock, err = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(socket.ETH_P_ALL))
++if not sock then
++    error(err)
++end
++
++local function packet_dump(data)
++    local dst = hex.encode(data:sub(1, 6), ':')
++    local src = hex.encode(data:sub(7, 12), ':')
++    local proto = string.unpack('>I2', data:sub(13, 14))
++
++    if proto ~= socket.ETH_P_ARP and proto ~= socket.ETH_P_IP then
++        return
++    end
++
++    local output = {src, '>', dst}
++
++    data = data:sub(15) -- skip mac header
++
++    if proto == socket.ETH_P_ARP then
++        output[#output + 1] = 'ARP'
++
++        local op = string.unpack('>I2', data:sub(7))
++
++        output[#output + 1] = op == socket.ARPOP_REQUEST and 'REQUEST' or 'REPLY'
++
++        if op == socket.ARPOP_REQUEST then
++            output[#output + 1] = socket.inet_ntop(socket.AF_INET, data:sub(25))
++        else
++            output[#output + 1] = socket.inet_ntop(socket.AF_INET, data:sub(15))
++            output[#output + 1] = hex.encode(data:sub(9, 14), ':')
++        end
++    elseif proto == socket.ETH_P_IP then
++        output[#output + 1] = 'IP'
++
++        local dst_ip = socket.inet_ntop(socket.AF_INET, data:sub(13))
++        local src_ip = socket.inet_ntop(socket.AF_INET, data:sub(17))
++
++        output[#output + 1] = src_ip
++        output[#output + 1] = '>'
++        output[#output + 1] = dst_ip
++
++        local iphl = (data:byte(1) & 0xf) * 4
++
++        local ip_proto = data:byte(10)
++        if ip_proto == socket.IPPROTO_ICMP then
++            output[#output + 1] = 'ICMP'
++        elseif ip_proto == socket.IPPROTO_TCP or ip_proto == socket.IPPROTO_UDP then
++            output[#output + 1] = ip_proto == socket.IPPROTO_TCP and 'TCP' or 'UDP'
++
++            data = data:sub(iphl + 1)
++            local src_port = string.unpack('>I2', data)
++            local dst_port = string.unpack('>I2', data:sub(3))
++
++            output[#output + 1] = src_port
++            output[#output + 1] = '>'
++            output[#output + 1] = dst_port
++        end
++    end
++
++    print(table.concat(output, ' '))
++end
++
++while true do
++    local data, err = sock:recv(4096)
++    if not data then
++        error(err)
++    end
++
++    packet_dump(data)
++end
+diff --git a/socket.c b/socket.c
+index 5877281..1d22e2f 100644
+--- a/socket.c
++++ b/socket.c
+@@ -16,6 +16,8 @@
+ #include <sys/un.h>
+ 
+ #include <linux/netlink.h>
++#include <linux/if_ether.h>
++#include <linux/if_arp.h>
+ #include <netinet/tcp.h>
+ 
+ #include "eco.h"
+@@ -153,6 +155,7 @@ static int lua_args_to_sockaddr(struct eco_socket *sock, lua_State *L, struct so
+         struct sockaddr_un un;
+         struct sockaddr_in in;
+         struct sockaddr_in6 in6;
++        struct sockaddr_ll ll;
+     } addr = {
+         .a.sa_family = sock->domain
+     };
+@@ -194,6 +197,24 @@ static int lua_args_to_sockaddr(struct eco_socket *sock, lua_State *L, struct so
+         addr.nl.nl_pid = luaL_optinteger(L, 3 + offset, 0);
+         break;
+ 
++    case AF_PACKET:
++        luaL_checktype(L, 2 + offset, LUA_TTABLE);
++
++        addrlen = sizeof(struct sockaddr_ll);
++
++        lua_getfield(L, 2 + offset, "ifindex");
++        if (!lua_isnil(L, -1))
++            addr.ll.sll_ifindex = luaL_checkinteger(L, -1);
++        lua_pop(L, 1);
++
++        lua_getfield(L, 2 + offset, "ifname");
++        if (!lua_isnil(L, -1)) {
++            const char *ifname = luaL_checkstring(L, -1);
++            addr.ll.sll_ifindex = if_nametoindex(ifname);
++        }
++        lua_pop(L, 1);
++        break;
++
+     default:
+         return luaL_error(L, "invalid domain");
+     }
+@@ -1041,5 +1062,20 @@ int luaopen_eco_core_socket(lua_State *L)
+     lua_add_constant(L, "IPPROTO_ICMP", IPPROTO_ICMP);
+     lua_add_constant(L, "IPPROTO_ICMPV6", IPPROTO_ICMPV6);
+ 
++    lua_add_constant(L, "IPPROTO_TCP", IPPROTO_TCP);
++    lua_add_constant(L, "IPPROTO_UDP", IPPROTO_UDP);
++
++    lua_add_constant(L, "ETH_P_IP", ETH_P_IP);
++    lua_add_constant(L, "ETH_P_IPV6", ETH_P_IPV6);
++    lua_add_constant(L, "ETH_P_ARP", ETH_P_ARP);
++    lua_add_constant(L, "ETH_P_PPP_DISC", ETH_P_PPP_DISC);
++    lua_add_constant(L, "ETH_P_PPP_SES", ETH_P_PPP_SES);
++    lua_add_constant(L, "ETH_P_ALL", ETH_P_ALL);
++
++    lua_add_constant(L, "ARPHRD_ETHER", ARPHRD_ETHER);
++
++    lua_add_constant(L, "ARPOP_REQUEST", ARPOP_REQUEST);
++    lua_add_constant(L, "ARPOP_REPLY", ARPOP_REPLY);
++
+     return 1;
+ }
+-- 
+2.34.1
+
