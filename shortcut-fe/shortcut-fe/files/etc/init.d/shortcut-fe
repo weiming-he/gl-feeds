@@ -39,10 +39,11 @@ load_sfe() {
 }
 
 start() {
-	local actype=$(uci -q get mtkhnat.global.actype)
-	local mtknat_enable=$(uci -q get mtkhnat.global.enable)
-	[ "$actype" == "1" ] || [ "$mtknat_enable" == "0" ] && exit 0
+	local actype=$(uci -q get ecm.global.actype)
+	local ecm_enable=$(uci -q get ecm.global.enable)
+	[ "$actype" == "1" ] || [ "$ecm_enable" == "0" ] && exit 0
 	[ -f "/sys/kernel/debug/hnat/hook_toggle" ] && echo '0' > /sys/kernel/debug/hnat/hook_toggle
+	[ -f "/sys/class/net/wwan0/queues/rx-0/rps_cpus" ] && echo '2' > /sys/class/net/wwan0/queues/rx-0/rps_cpus
 
 	local ipv6_enable=$(uci get glipv6.globals.enabled)
 	local qos_enable="$(grep queue /etc/config/qos  |grep -v "#")"
