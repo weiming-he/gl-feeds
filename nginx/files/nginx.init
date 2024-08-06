@@ -6,13 +6,6 @@ START=80
 USE_PROCD=1
 
 start_service() {
-	[ -f /etc/init.d/uhttpd ] && {
-		/etc/init.d/uhttpd enabled && {
-			/etc/init.d/uhttpd stop
-			/etc/init.d/uhttpd disable
-		}
-	}
-
 	[ -d /var/log/nginx ] || mkdir -p /var/log/nginx
 	[ -d /var/lib/nginx ] || mkdir -p /var/lib/nginx
 
@@ -21,4 +14,12 @@ start_service() {
 	procd_set_param file /etc/nginx/nginx.conf
 	procd_set_param respawn
 	procd_close_instance
+}
+
+boot() {
+	[ -f /lib/functions/gl_util.sh ] && {
+		. /lib/functions/gl_util.sh
+		wait_for_wifi_ready
+	}
+	/etc/init.d/nginx start
 }
