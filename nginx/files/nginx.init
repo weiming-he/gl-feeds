@@ -111,3 +111,11 @@ relog() {
 	[ -d /var/log/nginx ] || mkdir -p /var/log/nginx
 	procd_send_signal nginx '*' USR1
 }
+
+boot() {
+    [ -f /lib/functions/gl_util.sh ] && {
+           . /lib/functions/gl_util.sh
+           wait_for_wifi_ready
+    }
+    /etc/init.d/nginx start
+}

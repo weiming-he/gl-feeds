@@ -107,7 +107,8 @@ define Package/nginx/description
 endef
 
 define Package/nginx/conffiles
-/etc/nginx/
+/etc/nginx/nginx.cer
+/etc/nginx/nginx.key
 endef
 
 define Package/nginx-ssl
@@ -127,6 +128,11 @@ Package/nginx-ssl/description = $(Package/nginx/description) \
 
 define Package/nginx-ssl/config
   source "$(SOURCE)/Config_ssl.in"
+
+  config NGINX_USE_LUAJIT
+	bool
+	default y
+
 endef
 
 Package/nginx-ssl/conffiles = $(Package/nginx/conffiles)
