@@ -35,6 +35,12 @@ define Package/luajit2/description
  OpenResty's maintained branch of LuaJIT, a Just-In-Time (JIT) compiler for the Lua programming language
 endef
 
+define Package/luajit2/config
+config HAS_LUAJIT_ARCH
+	bool
+	default y if i386||x86_64||arm||armeb||aarch64||powerpc||mips||mipsel||mips64
+endef
+
 ifeq ($(HOST_ARCH),$(filter $(HOST_ARCH), x86_64 mips64))
   ifeq ($(CONFIG_ARCH_64BIT),)
     HOST_BITS := -m32
@@ -79,9 +85,11 @@ endef
 
 define Host/Compile
 	$(MAKE) $(HOST_JOBS) -C $(HOST_BUILD_DIR) \
+		HOST_CC="$(HOSTCC) $(HOST_CFLAGS) $(HOST_BITS)" \
 		DPREFIX=$(STAGING_DIR_HOSTPKG) \
-		TARGET_CFLAGS="$(HOST_CFLAGS)" \
-		TARGET_LDFLAGS="$(HOST_LDFLAGS)"
+		TARGET_CFLAGS="$(HOST_CFLAGS) $(HOST_BITS)" \
+		TARGET_LDFLAGS="$(HOST_LDFLAGS) $(HOST_BITS)" \
+		TARGET_SHLDFLAGS="$(HOST_BITS)"
 endef
 
 define Host/Install
@@ -89,6 +97,7 @@ define Host/Install
 		DPREFIX=$(STAGING_DIR_HOSTPKG) \
 		install
 	$(CP) $(STAGING_DIR_HOSTPKG)/bin/luajit-* $(STAGING_DIR_HOSTPKG)/bin/$(PKG_NAME)
+	$(CP) ./files/luajit_host.sh $(STAGING_DIR_HOSTPKG)/bin
 endef
 
 $(eval $(call HostBuild,luajit2))
