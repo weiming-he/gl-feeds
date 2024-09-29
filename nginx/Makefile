@@ -116,9 +116,7 @@ define Package/nginx-ssl
   TITLE += with SSL support
   VARIANT:=ssl
   DEPENDS+= +NGINX_PCRE:libpcre2 \
-	+NGINX_PCRE:nginx-ssl-util +!NGINX_PCRE:nginx-ssl-util-nopcre \
 	+NGINX_HTTP_GZIP:zlib +NGINX_DAV:libxml2
-  EXTRA_DEPENDS:=nginx-ssl-util$(if $(CONFIG_NGINX_PCRE),,-nopcre) (>=1.5-1) (<2)
   CONFLICTS:=nginx-full
 endef
 
@@ -156,22 +154,10 @@ define Package/nginx-ssl/install
 	$(INSTALL_BIN) ./files/nginx.init $(1)/etc/init.d/nginx
 endef
 
-define Package/nginx-ssl/prerm
-#!/bin/sh
-[ -z "$${IPKG_INSTROOT}" ] || exit 0
-[ "$${PKG_UPGRADE}" = "1" ] && exit 0
-eval $$(/usr/bin/nginx-util get_env)
-[ "$$(uci get "nginx.$${LAN_NAME}.$${MANAGE_SSL}")" = "self-signed" ] || exit 0
-rm -f "$$(uci get "nginx.$${LAN_NAME}.ssl_certificate")"
-rm -f "$$(uci get "nginx.$${LAN_NAME}.ssl_certificate_key")"
-exit 0
-endef
-
 define Package/nginx-full
   $(Package/nginx/default)
   TITLE += with ALL config selected
-  DEPENDS+=+libpcre2 +nginx-ssl-util +zlib +libxml2
-  EXTRA_DEPENDS:=nginx-ssl-util (>=1.5-1) (<2)
+  DEPENDS+=+libpcre2 +zlib +libxml2
   VARIANT:=full
   PROVIDES += nginx-ssl
 endef
@@ -180,8 +166,6 @@ Package/nginx-full/description = $(Package/nginx/description) \
   This variant is compiled with ALL config selected.
 
 Package/nginx-full/install = $(Package/nginx-ssl/install)
-
-Package/nginx-full/prerm = $(Package/nginx-ssl/prerm)
 
 Package/nginx-full/conffiles = $(Package/nginx/conffiles)
 
