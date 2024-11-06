@@ -1,13 +1,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ksmbd
-PKG_VERSION:=3.4.7
+PKG_VERSION:=3.3.7
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://github.com/cifsd-team/ksmbd/releases/download/$(PKG_VERSION)
-PKG_HASH:=ed9ecb2232046054bf0c1fef41690890f99d93b1d72b7e7d158746ac9be18c7f
+PKG_SOURCE_URL:=https://codeload.github.com/cifsd-team/cifsd/tar.gz/$(PKG_VERSION)?
+PKG_HASH:=d92706e2dc00bd612698be2c39759ea6170a869e657bae4a80cf6424a333babe
 
+PKG_MAINTAINER:=Andy Walsh <andy.walsh44+github@gmail.com>
 PKG_LICENSE:=GPL-2.0-or-later
 PKG_LICENSE_FILES:=COPYING
 
@@ -36,12 +37,8 @@ define KernelPackage/fs-ksmbd
 		+kmod-crypto-aead \
 		+kmod-crypto-ccm \
 		+kmod-crypto-gcm \
-		+kmod-asn1-decoder \
-		+kmod-oid-registry
+		+kmod-lib-crc32c
 endef
-
-# The last two DEPENDS are hacks in order to get CONFIG_ASN1 and CONFIG_OID_REGISTRY
-# which it seems can't be selected independently. Some bug in either base or upstream.
 
 define KernelPackage/fs-ksmbd/description
   Ksmbd is an In-kernel SMBv(1)2/3 fileserver.
