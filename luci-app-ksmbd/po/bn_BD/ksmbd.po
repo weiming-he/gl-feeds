@@ -1,46 +1,44 @@
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-04-19 13:21+0000\n"
-"Last-Translator: ettore <hettore.giacomini@gmail.com>\n"
-"Language-Team: Italian <https://hosted.weblate.org/projects/openwrt/"
-"luciapplicationsksmbd/it/>\n"
-"Language: it\n"
+"PO-Revision-Date: 2021-10-08 18:54+0000\n"
+"Last-Translator: Rayhan Nabi <rayhanjanam@gmail.com>\n"
+"Language-Team: Bengali (Bangladesh) <https://hosted.weblate.org/projects/"
+"openwrt/luciapplicationsksmbd/bn_BD/>\n"
+"Language: bn_BD\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 5.5-dev\n"
+"X-Generator: Weblate 4.9-dev\n"
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:87
 msgid "Allow guests"
-msgstr "Consenti ospiti"
+msgstr ""
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:44
 msgid "Allow legacy (insecure) protocols/authentication."
-msgstr "Consenti protocolli/autenticazione legacy (non sicuro)."
+msgstr ""
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:45
 msgid ""
 "Allow legacy smb(v1)/Lanman connections, needed for older devices without "
 "smb(v2.1/3) support."
 msgstr ""
-"Consenti connessioni smb(v1)/Lanman legacy, necessarie per dispositivi più "
-"vecchi senza supporto smb(v2.1/3)."
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:84
 msgid "Allowed users"
-msgstr "Utenti ammessi"
+msgstr ""
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:71
 msgid "Browse-able"
-msgstr "Navigabile"
+msgstr ""
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:103
 msgid "Create mask"
-msgstr "Crea maschera"
+msgstr ""
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:41
 msgid "Description"
-msgstr "Descrizione"
+msgstr "বর্ণনা"
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:109
 msgid "Directory mask"
@@ -48,7 +46,7 @@ msgstr ""
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:33
 msgid "Edit Template"
-msgstr "Modifica template"
+msgstr ""
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:33
 msgid "Edit the template that is used for generating the ksmbd configuration."
@@ -60,7 +58,7 @@ msgstr ""
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:32
 msgid "General Settings"
-msgstr "Impostazioni Generali"
+msgstr "সাধারণ সেটিংস"
 
 #: applications/luci-app-ksmbd/root/usr/share/rpcd/acl.d/luci-app-ksmbd.json:3
 msgid "Grant access to LuCI app ksmbd"
@@ -76,7 +74,7 @@ msgstr ""
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:35
 msgid "Interface"
-msgstr "Interfaccia"
+msgstr "ইন্টারফেস"
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:36
 msgid "Listen only on the given interface or, if unspecified, on lan"
@@ -84,7 +82,7 @@ msgstr ""
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:65
 msgid "Name"
-msgstr "Nome"
+msgstr ""
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:21
 #: applications/luci-app-ksmbd/root/usr/share/luci/menu.d/luci-app-ksmbd.json:3
@@ -93,7 +91,7 @@ msgstr ""
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:66
 msgid "Path"
-msgstr "Percorso"
+msgstr ""
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:61
 msgid ""
@@ -103,7 +101,7 @@ msgstr ""
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:76
 msgid "Read-only"
-msgstr "Sola lettura"
+msgstr "শুধুমাত্র পাঠযোগ্য"
 
 #: applications/luci-app-ksmbd/htdocs/luci-static/resources/view/ksmbd.js:60
 msgid "Shared Directories"
