@@ -6,7 +6,6 @@
  
 +#undef CONFIG_MODULE_STRIPPED
 +
-#include <linux/types.h>        /* For bool */
-#include <linux/compiler.h>     /* For __pure */
-
-
+ #include <linux/ctype.h>
+ #include <linux/version.h>
+ 
